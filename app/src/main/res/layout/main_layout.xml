@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="10dp">
+    <TextView
+        android:id="@+id/tv_appid"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:padding="10dp" />
+    <EditText
+        android:id="@+id/edt_inav_id"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="interactive id(inav_id)"/>
+    <EditText
+        android:id="@+id/edt_lss_id"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="live id(lss_id)"/>
+    <EditText
+        android:id="@+id/edt_token"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="token"/>
+    <Button
+        android:id="@+id/btn_interactive"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:onClick="showInteractive"
+        android:text="互动直播" />
+
+</LinearLayout>
