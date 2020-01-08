@@ -62,7 +62,7 @@ public class InteractiveFragment extends Fragment implements View.OnClickListene
     Button mReqBtn, mJoinBtn, mQuitBtn, mMemberBtn;//操作隐藏，demo默认进入直接上麦
     AlertDialog mDialog;
     //功能按钮
-    ImageView mSwitchCameraBtn, mInfoBtn;
+    ImageView mSwitchCameraBtn, mInfoBtn, beautifyFaceBtn;
     CheckBox mBroadcastTB, mVideoTB, mAudioTB, mDualTB;
     TextView mOnlineTV, tvScaleType;
 
@@ -80,8 +80,12 @@ public class InteractiveFragment extends Fragment implements View.OnClickListene
     Stream tempLocal;
     Room interactiveRoom;
     int changePosition = -1;
+    int updatePosition = -1;
     String[] scaleText = {"fit", "fill", "none"};
     int scaleType = 0;
+    int beautyLeve = 2;
+    int layerType = 2;
+
     Handler mHandler = new Handler(new Handler.Callback() {
         @Override
         public boolean handleMessage(Message msg) {
@@ -112,11 +116,12 @@ public class InteractiveFragment extends Fragment implements View.OnClickListene
 
     CopyOnWriteArrayList<Stream> mStreams = new CopyOnWriteArrayList<>();
 
-    public static InteractiveFragment getInstance(String roomid, String accessToken,String broadcastid) {
+    public static InteractiveFragment getInstance(String roomid, String accessToken, String broadcastid,int resolutionRatio) {
         InteractiveFragment fragment = new InteractiveFragment();
         fragment.mRoomId = roomid;
         fragment.mAccessToken = accessToken;
         fragment.mBroadcastid = broadcastid;
+        fragment.layerType = resolutionRatio;
         return fragment;
     }
 
@@ -166,7 +171,11 @@ public class InteractiveFragment extends Fragment implements View.OnClickListene
         } else if (!isOnline) {
             interactive.setListener(new RoomListener());
             interactive.enterRoom(mRoomAttr);
-            localView.setStream(localStream);
+            //demo 中一路流仅渲染到一个视图中，因此在添加渲染视图时移除所有已存在RenderView
+            if(localStream != null){
+                localStream.removeAllRenderView();
+                localStream.addRenderView(localView);
+            }
         }
     }
 
@@ -311,6 +320,7 @@ public class InteractiveFragment extends Fragment implements View.OnClickListene
         @Override
         public void onDidUpdateOfStream(Stream stream, JSONObject jsonObject) {//流状态更新
             Log.i(TAG, "onDidUpdateOfStream");
+            changeStream(stream);
         }
 
         @Override
@@ -332,7 +342,6 @@ public class InteractiveFragment extends Fragment implements View.OnClickListene
 
     //初始化本地流
     private void initLocalStream() {
-        int layerType = 2;
         int pixType = 0;
         JSONObject option = new JSONObject();
         try {
@@ -354,6 +363,16 @@ public class InteractiveFragment extends Fragment implements View.OnClickListene
                     option.put(Stream.kCurrentBitrateKey, 400);
                     option.put(Stream.kMaxBitrateKey, 600);
                     break;
+                case 3:
+                    //该分辨率下支持双流
+                    pixType = Stream.VhallFrameResolutionValue.VhallFrameResolution640x480.getValue();
+                    option.put(Stream.kFrameResolutionTypeKey, pixType);
+                    //重置双流码率，当前分辨率默认码率仅支持单流
+                    option.put(Stream.kMinBitrateKbpsKey, 500);
+                    option.put(Stream.kCurrentBitrateKey, 900);
+                    option.put(Stream.kMaxBitrateKey, 1200);
+                    layerType = 2;
+                    break;
             }
             option.put(Stream.kStreamOptionStreamType, Stream.VhallStreamType.VhallStreamTypeAudioAndVideo.getValue());
             option.put(Stream.kNumSpatialLayersKey, layerType);//单双流设置 2 双流 其他默认单流
@@ -362,7 +381,9 @@ public class InteractiveFragment extends Fragment implements View.OnClickListene
         }
         localStream = interactive.createLocalStream(option, "paassdk");
 //        localStream = interactive.createLocalStream(pixType, "paassdk", layerType);
-        localView.setStream(localStream);
+        localStream.removeAllRenderView();
+        localStream.addRenderView(localView);
+        localStream.setEnableBeautify(true);
         tempLocal = localStream;
     }
 
@@ -521,26 +542,28 @@ public class InteractiveFragment extends Fragment implements View.OnClickListene
                     return;
                 mStreams.add(stream);
                 mAdapter.notifyItemInserted(mStreams.size() - 1);
-//                mAdapter.notifyDataSetChanged();
             }
         });
     }
 
-    public boolean changeStream(Stream stream) {
+    //修改流状态
+    public void changeStream(Stream stream) {
         if (stream == null)
-            return true;
-        boolean added = false;
-        for (int i = 0; i < mStreamContainer.getChildCount(); i++) {
-            View v = mStreamContainer.getChildAt(i);
-            Stream item = (Stream) v.getTag();
-            if (item != null && item.streamId == stream.streamId) {
-                VHRenderView renderView = v.findViewById(R.id.renderview);
-                renderView.setStream(stream);
-                added = true;
-                break;
+            return;
+        mHandler.post(new Runnable() {
+            @Override
+            public void run() {
+                for (int i = 0; i < mStreams.size(); i++) {
+                    if (stream.streamId.equals(mStreams.get(i).streamId)) {
+                        updatePosition = i;
+                        mStreams.set(i, stream);
+                        mAdapter.notifyItemChanged(i);
+                        break;
+                    }
+                }
             }
-        }
-        return added;
+        });
+
     }
 
     private void removeStream(final Stream stream) {
@@ -584,6 +607,7 @@ public class InteractiveFragment extends Fragment implements View.OnClickListene
         mVideoTB = getView().findViewById(R.id.tb_video);
         mAudioTB = getView().findViewById(R.id.tb_audio);
         mDualTB = getView().findViewById(R.id.tb_dual);
+        beautifyFaceBtn = getView().findViewById(R.id.iv_beautify_face);
         mSwitchCameraBtn = getView().findViewById(R.id.iv_camera);
         mMemberBtn = getView().findViewById(R.id.btn_members);
         mInfoBtn = getView().findViewById(R.id.iv_info);
@@ -631,6 +655,21 @@ public class InteractiveFragment extends Fragment implements View.OnClickListene
                 else
                     localStream.unmuteAudio(null);
 
+            }
+        });
+
+        beautifyFaceBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                int level = ++beautyLeve % 5;
+                if (level == 0) {
+                    localStream.setEnableBeautify(false);
+                    Toast.makeText(getContext(), "关闭美颜", Toast.LENGTH_SHORT).show();
+                } else {
+                    localStream.setEnableBeautify(true);
+                    localStream.setBeautifyLevel(level);
+                    Toast.makeText(getContext(), "美颜等级" + level, Toast.LENGTH_SHORT).show();
+                }
             }
         });
 
@@ -810,19 +849,22 @@ public class InteractiveFragment extends Fragment implements View.OnClickListene
     private ItemClickListener itemClickListener = new ItemClickListener() {
         @Override
         public void onItemClick(int position) {
-//            Stream stream = mStreams.get(position);
-//            mStreams.remove(position);
-//            if (!tempLocal.isLocal) {
-//                interactive.switchDualStream(tempLocal, 0, null);
-//            }
-//            mStreams.add(position, tempLocal);
-//            mAdapter.notifyItemChanged(position);
-//            changePosition = position;
-//            tempLocal = stream;
-//            localView.setStream(tempLocal);
-//            if (!tempLocal.isLocal) {
-//                interactive.switchDualStream(tempLocal, 1, null);
-//            }
+            Stream stream = mStreams.get(position);
+            mStreams.remove(position);
+            stream.removeAllRenderView();
+            stream.addRenderView(localView);
+            if (!tempLocal.isLocal) {
+                tempLocal.switchDualStream(0, null);
+            }
+            mStreams.add(position, tempLocal);
+            mAdapter.notifyItemChanged(position);
+            changePosition = position;
+            tempLocal = stream;
+            tempLocal.removeAllRenderView();
+            tempLocal.addRenderView(localView);
+            if (!tempLocal.isLocal) {
+                tempLocal.switchDualStream(1, null);
+            }
         }
     };
 
@@ -874,26 +916,37 @@ public class InteractiveFragment extends Fragment implements View.OnClickListene
         @Override
         public void onBindViewHolder(@NonNull MyHolder holder, int position) {
             Log.e(TAG, "onBindViewHolder:" + position);
-            Stream stream = mStreams.get(position);
-            holder.renderView.setStream(stream);
-            holder.renderView.setTag(stream);
-            holder.tvDescribe.setText(stream.userId);
-            holder.cbVideo.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            holder.stream = mStreams.get(position);
+            //demo 中一路流仅渲染到一个视图中，因此在添加渲染视图时移除所有已存在RenderView
+            holder.stream.removeAllRenderView();
+            holder.stream.addRenderView(holder.renderView);
+            holder.tvDescribe.setText(holder.stream.userId);
+            JSONObject obj = holder.stream.remoteMuteStream;
+            boolean muteVideo;
+            boolean muteAudio;
+            if (obj == null) {
+                obj = holder.stream.muteStream;
+            }
+            muteVideo = obj.optBoolean("video");
+            muteAudio = obj.optBoolean("audio");
+            holder.cbAudio.setChecked(muteAudio);
+            holder.cbVideo.setChecked(muteVideo);
+            holder.cbVideo.setOnClickListener(new View.OnClickListener() {
                 @Override
-                public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                    if (isChecked)//关闭视频开
-                        stream.muteVideo(null);
+                public void onClick(View v) {
+                    if (holder.cbVideo.isChecked())//关闭视频开
+                        holder.stream.muteVideo(null);
                     else//关闭视频关
-                        stream.unmuteVideo(null);
+                        holder.stream.unmuteVideo(null);
                 }
             });
-            holder.cbAudio.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            holder.cbAudio.setOnClickListener(new View.OnClickListener() {
                 @Override
-                public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                    if (isChecked)
-                        stream.muteAudio(null);
+                public void onClick(View v) {
+                    if (holder.cbAudio.isChecked())//关闭视频开
+                        holder.stream.muteAudio(null);
                     else//关闭视频关
-                        stream.unmuteAudio(null);
+                        holder.stream.unmuteAudio(null);
                 }
             });
 
@@ -901,7 +954,7 @@ public class InteractiveFragment extends Fragment implements View.OnClickListene
                 @Override
                 public void onClick(View v) {
                     if (infoListener != null) {
-                        infoListener.onInfoClick(stream);
+                        infoListener.onInfoClick(holder.stream);
                     }
                 }
             });
@@ -917,7 +970,7 @@ public class InteractiveFragment extends Fragment implements View.OnClickListene
             super.onViewAttachedToWindow(holder);
             Log.e(TAG, "onViewAttachedToWindow");
             if (holder.getAdapterPosition() != changePosition) {
-                holder.renderView.getStream().unmuteVideo(null);
+                holder.stream.unmuteVideo(null);
             }
         }
 
@@ -927,9 +980,11 @@ public class InteractiveFragment extends Fragment implements View.OnClickListene
             super.onViewDetachedFromWindow(holder);
             Log.e(TAG, "onViewDetachedFromWindow");
             changePosition = -1;
-            if (holder.renderView.getStream() != tempLocal) {
-                if (!holder.renderView.getStream().isLocal) {
-                    holder.renderView.getStream().muteVideo(null);
+            if (updatePosition != holder.getAdapterPosition()) {
+                if (holder.stream != tempLocal) {
+                    if (!holder.stream.isLocal) {
+                        holder.stream.muteVideo(null);
+                    }
                 }
             }
         }
@@ -943,6 +998,7 @@ public class InteractiveFragment extends Fragment implements View.OnClickListene
         CheckBox cbAudio;
         TextView tvDescribe;
         ImageView ivInfo;
+        Stream stream;
 
 
         public MyHolder(View itemView) {
@@ -963,6 +1019,4 @@ public class InteractiveFragment extends Fragment implements View.OnClickListene
             cbAudio = itemView.findViewById(R.id.cb_audio);
         }
     }
-
-
 }

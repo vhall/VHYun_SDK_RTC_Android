@@ -25,11 +25,52 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:hint="token"/>
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="互动分辨率设置:"/>
+    <RadioGroup
+        android:id="@+id/rg_resolution_ratio"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+        <RadioButton
+            android:id="@+id/rb_type1"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="192*144"
+            android:textSize="12sp"/>
+        <RadioButton
+            android:id="@+id/rb_type2"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="320*240"
+            android:textSize="12sp"/>
+        <RadioButton
+            android:id="@+id/rb_type3"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="480*360"
+            android:checked="true"
+            android:textSize="12sp"/>
+        <RadioButton
+            android:id="@+id/rb_type4"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="640*480"
+            android:textSize="12sp"/>
+    </RadioGroup>
     <Button
         android:id="@+id/btn_interactive"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:onClick="showInteractive"
         android:text="互动直播" />
+    <Button
+        android:id="@+id/btn_oto_interactive"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="1V1互动"
+        android:onClick="showOTOInteractive"/>
 
 </LinearLayout>

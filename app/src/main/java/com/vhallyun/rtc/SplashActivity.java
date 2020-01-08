@@ -17,6 +17,7 @@ import com.vhall.framework.VhallSDK;
 import com.vhall.framework.utils.SignatureUtil;
 
 import static android.Manifest.permission.READ_PHONE_STATE;
+import static android.Manifest.permission.WRITE_EXTERNAL_STORAGE;
 
 /**
  * Created by Hank on 2018/3/9.
@@ -50,15 +51,16 @@ public class SplashActivity extends AppCompatActivity {
     private void getPermission() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M)
             return;
-        if (checkSelfPermission(READ_PHONE_STATE) == PackageManager.PERMISSION_GRANTED)
+        if (checkSelfPermission(READ_PHONE_STATE) == PackageManager.PERMISSION_GRANTED && checkSelfPermission(WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED){
             return;
-        requestPermissions(new String[]{READ_PHONE_STATE}, REQUEST_READ_PHONE_STATE);
+        }
+        requestPermissions(new String[]{READ_PHONE_STATE,WRITE_EXTERNAL_STORAGE}, REQUEST_READ_PHONE_STATE);
     }
 
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         if (requestCode == REQUEST_READ_PHONE_STATE) {
-            if (grantResults.length == 1 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+            if (grantResults.length == 2 && grantResults[0] == PackageManager.PERMISSION_GRANTED && grantResults[1] == PackageManager.PERMISSION_GRANTED) {
                 Log.i(TAG, "get READ_PHONE_STATE permission success");
             }
         }

@@ -12,10 +12,11 @@ import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.RadioGroup;
 import android.widget.TextView;
 
 import com.vhall.framework.VhallSDK;
-
+import com.vhallyun.rtc.otoInteractive.activity.OTOActivity;
 
 
 import static android.Manifest.permission.CAMERA;
@@ -38,7 +39,9 @@ public class MainActivity extends Activity {
     private String token;
     private String rtcId;
     private String lssId;
-
+    private RadioGroup rg;
+    int resolutionRatio = 2;
+    private Intent intent;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -50,16 +53,73 @@ public class MainActivity extends Activity {
         edtLssId = findViewById(R.id.edt_lss_id);
         edtRtcId = findViewById(R.id.edt_inav_id);
         edtToken = findViewById(R.id.edt_token);
+        rg = findViewById(R.id.rg_resolution_ratio);
         token = sp.getString(KEY_TOKEN, "");
         rtcId = sp.getString(KEY_INAV_ID, "");
         lssId = sp.getString(KEY_LSS_ID, "");
         edtToken.setText(token);
         edtRtcId.setText(rtcId);
         edtLssId.setText(lssId);
+        rg.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(RadioGroup group, int checkedId) {
+
+                switch (checkedId) {
+                    case R.id.rb_type1:
+                        resolutionRatio = 0;
+                        break;
+                    case R.id.rb_type2:
+                        resolutionRatio = 1;
+                        break;
+                    case R.id.rb_type3:
+                        resolutionRatio = 2;
+                        break;
+                    case R.id.rb_type4:
+                        resolutionRatio = 3;
+                        break;
+                }
+            }
+        });
     }
 
+    private long lastClickTime = 0;
 
     public void showInteractive(View view) {
+        /**
+         * 500ms 内仅响应一次点击事件
+         * 谨防误触，避免多次启动页面
+         */
+        if (System.currentTimeMillis() - lastClickTime > 500) {
+            lastClickTime = System.currentTimeMillis();
+            storeCommonParams();
+            intent = new Intent(this, InteractiveActivity.class);
+            intent.putExtra("channelid", rtcId);
+            intent.putExtra("token", token);
+            intent.putExtra("resolutionRation", resolutionRatio);
+            if (!TextUtils.isEmpty(lssId)) {
+                intent.putExtra("broadCastId", lssId);
+            }
+            if (getPushPermission(REQUEST_INTERACTIVE)) {
+                startActivity(intent);
+            }
+        }
+    }
+
+    public void showOTOInteractive(View view) {
+        if (System.currentTimeMillis() - lastClickTime > 500) {
+            lastClickTime = System.currentTimeMillis();
+            storeCommonParams();
+            intent = new Intent(this, OTOActivity.class);
+            intent.putExtra("channelid", rtcId);
+            intent.putExtra("token", token);
+            intent.putExtra("resolutionRation", resolutionRatio);
+            if (getPushPermission(REQUEST_INTERACTIVE)) {
+                startActivity(intent);
+            }
+        }
+    }
+
+    private void storeCommonParams() {
         rtcId = edtRtcId.getText().toString().trim();
         token = edtToken.getText().toString().trim();
         lssId = edtLssId.getText().toString().trim();
@@ -67,16 +127,6 @@ public class MainActivity extends Activity {
             return;
         }
         sp.edit().putString(KEY_INAV_ID, rtcId).putString(KEY_TOKEN, token).commit();
-
-        if (getPushPermission(REQUEST_INTERACTIVE)) {
-            Intent intent = new Intent(this, InteractiveActivity.class);
-            intent.putExtra("channelid", rtcId);
-            intent.putExtra("token", token);
-            if (!TextUtils.isEmpty(lssId)) {
-                intent.putExtra("broadCastId", lssId);
-            }
-            startActivity(intent);
-        }
     }
 
 
@@ -99,11 +149,10 @@ public class MainActivity extends Activity {
         if (requestCode == REQUEST_INTERACTIVE) {
             if (grantResults.length == 2 && grantResults[0] == PackageManager.PERMISSION_GRANTED && grantResults[1] == PackageManager.PERMISSION_GRANTED) {
                 Log.i(TAG, "get REQUEST_PUSH permission success");
-                Intent intent = new Intent(this, InteractiveActivity.class);
-                intent.putExtra("channelid", rtcId);
-                intent.putExtra("token", token);
                 startActivity(intent);
             }
         }
     }
+
+
 }

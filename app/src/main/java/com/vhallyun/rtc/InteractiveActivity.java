@@ -12,7 +12,9 @@ public class InteractiveActivity extends FragmentActivity {
     String mRoomId;
     String mAccessToken;
     String mBroadCastId;
+    int resolutionRation = 2;
     InteractiveFragment mInteractiveFrag;
+
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -20,9 +22,21 @@ public class InteractiveActivity extends FragmentActivity {
         mRoomId = getIntent().getStringExtra("channelid");
         mAccessToken = getIntent().getStringExtra("token");
         mBroadCastId = getIntent().getStringExtra("broadCastId");
+        resolutionRation = getIntent().getIntExtra("resolutionRation", 2);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         setContentView(R.layout.interactive_layout);
-        mInteractiveFrag = InteractiveFragment.getInstance(mRoomId, mAccessToken,mBroadCastId);
+
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        /**
+         * 页面可见时加载fragment
+         * 1.可提升页面响应速度
+         * 2.可避免fragment内异步请求引起的异常
+         */
+        mInteractiveFrag = InteractiveFragment.getInstance(mRoomId, mAccessToken, mBroadCastId, resolutionRation);
         FragmentTransaction transaction = getSupportFragmentManager().beginTransaction();
         transaction.add(R.id.videoFrame, mInteractiveFrag);
         transaction.commit();
