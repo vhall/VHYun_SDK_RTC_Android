@@ -13,7 +13,7 @@ public class InteractiveActivity extends FragmentActivity {
     String mAccessToken;
     String mBroadCastId;
     int resolutionRation = 2;
-    InteractiveFragment mInteractiveFrag;
+    InteractiveFragment mInteractiveFrag = null;
 
 
     @Override
@@ -36,10 +36,13 @@ public class InteractiveActivity extends FragmentActivity {
          * 1.可提升页面响应速度
          * 2.可避免fragment内异步请求引起的异常
          */
-        mInteractiveFrag = InteractiveFragment.getInstance(mRoomId, mAccessToken, mBroadCastId, resolutionRation);
-        FragmentTransaction transaction = getSupportFragmentManager().beginTransaction();
-        transaction.add(R.id.videoFrame, mInteractiveFrag);
-        transaction.commit();
+        if(mInteractiveFrag ==null)
+        {
+            mInteractiveFrag = InteractiveFragment.getInstance(mRoomId, mAccessToken, mBroadCastId, resolutionRation);
+            FragmentTransaction transaction = getSupportFragmentManager().beginTransaction();
+            transaction.add(R.id.videoFrame, mInteractiveFrag);
+            transaction.commit();
+        }
     }
 
     @Override

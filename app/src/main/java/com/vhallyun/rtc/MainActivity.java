@@ -14,6 +14,7 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.RadioGroup;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.vhall.framework.VhallSDK;
 import com.vhallyun.rtc.otoInteractive.activity.OTOActivity;
@@ -91,7 +92,11 @@ public class MainActivity extends Activity {
          */
         if (System.currentTimeMillis() - lastClickTime > 500) {
             lastClickTime = System.currentTimeMillis();
-            storeCommonParams();
+            if(!storeCommonParams()){
+                Toast.makeText(this, "参数为空", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
             intent = new Intent(this, InteractiveActivity.class);
             intent.putExtra("channelid", rtcId);
             intent.putExtra("token", token);
@@ -108,7 +113,11 @@ public class MainActivity extends Activity {
     public void showOTOInteractive(View view) {
         if (System.currentTimeMillis() - lastClickTime > 500) {
             lastClickTime = System.currentTimeMillis();
-            storeCommonParams();
+            if(!storeCommonParams()){
+                Toast.makeText(this, "参数为空", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
             intent = new Intent(this, OTOActivity.class);
             intent.putExtra("channelid", rtcId);
             intent.putExtra("token", token);
@@ -119,14 +128,15 @@ public class MainActivity extends Activity {
         }
     }
 
-    private void storeCommonParams() {
+    private boolean storeCommonParams() {
         rtcId = edtRtcId.getText().toString().trim();
         token = edtToken.getText().toString().trim();
         lssId = edtLssId.getText().toString().trim();
         if (TextUtils.isEmpty(rtcId) || TextUtils.isEmpty(token)) {
-            return;
+            return false;
         }
         sp.edit().putString(KEY_INAV_ID, rtcId).putString(KEY_TOKEN, token).commit();
+        return true;
     }
 
 

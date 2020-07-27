@@ -1,6 +1,5 @@
 package com.vhallyun.rtc;
 
-
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -28,7 +27,9 @@ import android.widget.PopupWindow;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.vhall.framework.VhallSDK;
 import com.vhall.ilss.VHInteractive;
+import com.vhall.vhallrtc.client.FinishCallback;
 import com.vhall.vhallrtc.client.Room;
 import com.vhall.vhallrtc.client.Stream;
 import com.vhall.vhallrtc.client.VHRenderView;
@@ -63,8 +64,8 @@ public class InteractiveFragment extends Fragment implements View.OnClickListene
     AlertDialog mDialog;
     //功能按钮
     ImageView mSwitchCameraBtn, mInfoBtn, beautifyFaceBtn;
-    CheckBox mBroadcastTB, mVideoTB, mAudioTB, mDualTB;
-    TextView mOnlineTV, tvScaleType;
+    CheckBox mBroadcastTB, mVideoTB, mAudioTB, mChangeVoiceTB, mMianlayoutTB;
+    TextView mOnlineTV, tvScaleType,tvlayoutType;
 
     public String mRoomId;
     public String mAccessToken;
@@ -78,13 +79,13 @@ public class InteractiveFragment extends Fragment implements View.OnClickListene
     ActionPopu mActionPopu;
     StreamInfoPopu streamPop;
     Stream tempLocal;
-    Room interactiveRoom;
     int changePosition = -1;
     int updatePosition = -1;
     String[] scaleText = {"fit", "fill", "none"};
     int scaleType = 0;
     int beautyLeve = 2;
     int layerType = 2;
+    int layoutType = VHInteractive.CANVAS_LAYOUT_PATTERN_TILED_5_1T4D;
 
     Handler mHandler = new Handler(new Handler.Callback() {
         @Override
@@ -101,7 +102,7 @@ public class InteractiveFragment extends Fragment implements View.OnClickListene
                             stream.muteStream.put(Stream.kStreamOptionVideo, true);
                             //禁用音频，仅订阅视频
 //                            stream.muteStream.put(Stream.kStreamOptionAudio, true);
-                            interactiveRoom.subscribe(stream); //订阅房间内的其他流
+                            interactive.subscribeStream(stream); //订阅房间内的其他流
                         } catch (JSONException e) {
                             e.printStackTrace();
                         }
@@ -198,7 +199,7 @@ public class InteractiveFragment extends Fragment implements View.OnClickListene
 
 
     private void initInteractive() {
-        interactive.init(mRoomId, mAccessToken, new VHInteractive.InitCallback() {
+        interactive.init(mRoomId, mAccessToken,mBroadcastid, new VHInteractive.InitCallback() {
             @Override
             public void onSuccess() {
                 isEnable = true;
@@ -219,7 +220,6 @@ public class InteractiveFragment extends Fragment implements View.OnClickListene
         @Override
         public void onDidConnect(Room room, JSONObject jsonObject) {//进入房间
             Log.i(TAG, "onDidConnect");
-            interactiveRoom = room;
             subscribeStreams(room.getRemoteStreams());
             join();//进入房间成功，自动上麦
 
@@ -257,19 +257,20 @@ public class InteractiveFragment extends Fragment implements View.OnClickListene
         public void onDidUnPublishStream(Room room, Stream stream) {//下麦
             Log.i(TAG, "onDidUnPublishStream");
             isOnline = false;
-
         }
 
         @Override
         public void onDidSubscribeStream(Room room, Stream stream) {//订阅其他流
             Log.i(TAG, "onDidSubscribeStream" + stream.streamId);
             addStream(stream);
+            refreshMembers();
         }
 
         @Override
         public void onDidUnSubscribeStream(Room room, Stream stream) {//取消订阅
             Log.i(TAG, "onDidUnSubscribeStream");
             removeStream(stream);
+            refreshMembers();
         }
 
         @Override
@@ -320,7 +321,13 @@ public class InteractiveFragment extends Fragment implements View.OnClickListene
         @Override
         public void onDidUpdateOfStream(Stream stream, JSONObject jsonObject) {//流状态更新
             Log.i(TAG, "onDidUpdateOfStream");
+            JSONObject obj = jsonObject.optJSONObject("muteStream");
+            boolean muteAudio = obj.optBoolean("audio");// true 禁音、false 未禁音
+            boolean muteVideo = obj.optBoolean("video");// true 禁视频、 false 未禁视频
+            //订阅端如需更新标识可自行处理业务逻辑
+
             changeStream(stream);
+
         }
 
         @Override
@@ -606,23 +613,50 @@ public class InteractiveFragment extends Fragment implements View.OnClickListene
         mBroadcastTB = getView().findViewById(R.id.tb_broadcast);
         mVideoTB = getView().findViewById(R.id.tb_video);
         mAudioTB = getView().findViewById(R.id.tb_audio);
-        mDualTB = getView().findViewById(R.id.tb_dual);
+        mChangeVoiceTB = getView().findViewById(R.id.tb_changeVoice);
         beautifyFaceBtn = getView().findViewById(R.id.iv_beautify_face);
         mSwitchCameraBtn = getView().findViewById(R.id.iv_camera);
+        mMianlayoutTB = getView().findViewById(R.id.tb_mainlayout);
         mMemberBtn = getView().findViewById(R.id.btn_members);
         mInfoBtn = getView().findViewById(R.id.iv_info);
         mOnlineTV = getView().findViewById(R.id.tv_online);
         tvScaleType = getView().findViewById(R.id.tv_scale_type);
+        tvlayoutType= getView().findViewById(R.id.tv_layout);
         mJoinBtn.setOnClickListener(this);
         mQuitBtn.setOnClickListener(this);
         mReqBtn.setOnClickListener(this);
         mMemberBtn.setOnClickListener(this);
         mSwitchCameraBtn.setOnClickListener(this);
         mInfoBtn.setOnClickListener(this);
-        mDualTB.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+        mChangeVoiceTB.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                tempLocal.changeVoiceType(isChecked ? 1 : 0);
+                localStream.changeVoiceType(isChecked ? 1 : 0);
+                mHandler.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        Toast.makeText(mContext, isChecked?"已开启变声":"已关闭变声", Toast.LENGTH_SHORT).show();
+                    }
+                });
+            }
+        });
+        //设置主屏
+        mMianlayoutTB.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                tempLocal.setMixLayoutMainScreen(null, new FinishCallback() {
+                    @Override
+                    public void onFinish(int i, @Nullable String s) {
+                        if(i==200){
+                            mHandler.post(new Runnable() {
+                                @Override
+                                public void run() {
+                                    Toast.makeText(mContext, "成功设置主画面", Toast.LENGTH_SHORT).show();
+                                }
+                            });
+                        }
+                    }
+                });
             }
         });
         mBroadcastTB.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
@@ -634,7 +668,27 @@ public class InteractiveFragment extends Fragment implements View.OnClickListene
                     return;
                 }
                 int type = isChecked ? 1 : 2;
-                interactive.broadcastRoom(mBroadcastid, type, null);
+                interactive.broadcastRoom(type, new Callback() {
+                    @Override
+                    public void onFailure(Call call, IOException e) {
+                        mHandler.post(new Runnable() {
+                            @Override
+                            public void run() {
+                                Toast.makeText(mContext, isChecked?"开启旁路失败":"关闭旁路失败", Toast.LENGTH_SHORT).show();
+                            }
+                        });
+                    }
+
+                    @Override
+                    public void onResponse(Call call, Response response) throws IOException {
+                        mHandler.post(new Runnable() {
+                            @Override
+                            public void run() {
+                                Toast.makeText(mContext, isChecked?"已开启旁路":"已关闭旁路", Toast.LENGTH_SHORT).show();
+                            }
+                        });
+                    }
+                });
             }
         });
         mVideoTB.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
@@ -689,6 +743,36 @@ public class InteractiveFragment extends Fragment implements View.OnClickListene
                         localView.setScalingMode(SurfaceViewRenderer.VHRenderViewScalingMode.kVHRenderViewScalingModeNone);
                         break;
                 }
+            }
+        });
+
+        tvlayoutType.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                int type = ++layoutType % 26;
+                int layoutType = VHInteractive.CANVAS_LAYOUT_PATTERN_TILED_5_1T4D;
+                tvlayoutType.setText(String.valueOf(type));
+                interactive.broadcastLayout(type, new Callback() {
+                    @Override
+                    public void onFailure(Call call, IOException e) {
+                        mHandler.post(new Runnable() {
+                            @Override
+                            public void run() {
+                                Toast.makeText(mContext,e.getMessage(), Toast.LENGTH_SHORT).show();
+                            }
+                        });
+                    }
+
+                    @Override
+                    public void onResponse(Call call, Response response) throws IOException {
+                        mHandler.post(new Runnable() {
+                            @Override
+                            public void run() {
+                                Toast.makeText(mContext,"已设置旁路布局"+type, Toast.LENGTH_SHORT).show();
+                            }
+                        });
+                    }
+                });
             }
         });
     }
@@ -756,6 +840,7 @@ public class InteractiveFragment extends Fragment implements View.OnClickListene
                 }
             });
         }
+        refreshMembers();
         if (data != null)
             mMemberPopu.refreshData(data);
         if (show)
@@ -763,6 +848,9 @@ public class InteractiveFragment extends Fragment implements View.OnClickListene
     }
 
     private void showAction(Member member) {
+        if(member.userid.equals(VhallSDK.getInstance().mUserId))//本人不做处理
+            return;
+
         if (mActionPopu == null) {
             mActionPopu = new ActionPopu(mContext);
         }
