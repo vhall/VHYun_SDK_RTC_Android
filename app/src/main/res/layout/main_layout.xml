@@ -67,6 +67,12 @@
         android:onClick="showInteractive"
         android:text="互动直播" />
     <Button
+        android:id="@+id/btn_screen_record_interactive"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:onClick="showScreenRecordInteractive"
+        android:text="录屏互动直播" />
+    <Button
         android:id="@+id/btn_oto_interactive"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"

@@ -110,6 +110,32 @@ public class MainActivity extends Activity {
         }
     }
 
+    public void showScreenRecordInteractive(View view) {
+        /**
+         * 500ms 内仅响应一次点击事件
+         * 谨防误触，避免多次启动页面
+         */
+        if (System.currentTimeMillis() - lastClickTime > 500) {
+            lastClickTime = System.currentTimeMillis();
+            if(!storeCommonParams()){
+                Toast.makeText(this, "参数为空", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            intent = new Intent(this, InteractiveActivity.class);
+            intent.putExtra("channelid", rtcId);
+            intent.putExtra("token", token);
+            intent.putExtra("resolutionRation", resolutionRatio);
+            intent.putExtra("type", InteractiveActivity.SCREEN_RECORD_LIVE);
+            if (!TextUtils.isEmpty(lssId)) {
+                intent.putExtra("broadCastId", lssId);
+            }
+            if (getPushPermission(REQUEST_INTERACTIVE)) {
+                startActivity(intent);
+            }
+        }
+    }
+
     public void showOTOInteractive(View view) {
         if (System.currentTimeMillis() - lastClickTime > 500) {
             lastClickTime = System.currentTimeMillis();
@@ -135,7 +161,7 @@ public class MainActivity extends Activity {
         if (TextUtils.isEmpty(rtcId) || TextUtils.isEmpty(token)) {
             return false;
         }
-        sp.edit().putString(KEY_INAV_ID, rtcId).putString(KEY_TOKEN, token).commit();
+        sp.edit().putString(KEY_INAV_ID, rtcId).putString(KEY_TOKEN, token).putString(KEY_LSS_ID,lssId).commit();
         return true;
     }
 

@@ -8,6 +8,7 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
 
     <uses-permission
         android:name="android.permission.READ_LOGS"
@@ -19,7 +20,9 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/AppTheme"
-        android:usesCleartextTraffic="true">
+        android:usesCleartextTraffic="true"
+        android:name=".MyApp"
+        >
         <activity
             android:name=".SplashActivity"
             android:configChanges="orientation|screenSize"
@@ -40,5 +43,9 @@
             android:name=".otoInteractive.activity.OTOActivity"
             android:configChanges="orientation|screenSize"
             android:screenOrientation="portrait" />
+
+        <service android:name=".screenrecord.ScreenRecordService"
+            android:exported="false"
+            />
     </application>
 </manifest>
