@@ -28,7 +28,7 @@ public class SplashActivity extends AppCompatActivity {
     private static final int REQUEST_READ_PHONE_STATE = 0;
     EditText mEditAppid;
     EditText mEditUserid;
-    TextView tvPackageName, tvSignatures;
+    TextView tvPackageName, tvSignatures,app_version;
 
 
     @Override
@@ -42,9 +42,11 @@ public class SplashActivity extends AppCompatActivity {
         tvPackageName = findViewById(R.id.tv_package_name);
         tvPackageName.setText(getPackageName());
         tvSignatures = findViewById(R.id.tv_signatures);
+        app_version = findViewById(R.id.app_version);
         tvSignatures.setText(SignatureUtil.getSignatureSHA1(this));
         getPermission();
 
+        app_version.setText(String.format("Version: v%s",BuildConfig.VERSION_NAME));
     }
 
     //初始化SDK需要读取手机信息做信息统计，如果取不到权限，信息为空，不影响SDK使用
