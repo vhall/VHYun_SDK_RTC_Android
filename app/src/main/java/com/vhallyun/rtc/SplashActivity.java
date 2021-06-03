@@ -43,7 +43,7 @@ public class SplashActivity extends AppCompatActivity {
         tvPackageName.setText(getPackageName());
         tvSignatures = findViewById(R.id.tv_signatures);
         app_version = findViewById(R.id.app_version);
-        tvSignatures.setText(SignatureUtil.getSignatureSHA1(this));
+        tvSignatures.setText(SignatureUtil.getSignatureSHA1(this, SignatureUtil.getPackageName(this)));
         getPermission();
 
         app_version.setText(String.format("Version: v%s",BuildConfig.VERSION_NAME));
